@@ -1,36 +1,37 @@
 import streamlit as st
 import pandas as pd
-from preprocessing import split_into_sentences, preprocess_sentences, create_freq_matrix, create_similarity_matrix
-from bow import k_nearest_documents
+from preprocessing import split_into_sentences, preprocess_sentences
+from matrix import k_nearest_documents, create_freq_matrix, create_similarity_matrix
 from tfidf import calculate_tfidf, tfidf_new
 from distances import distance_euclidean, distance_manhattan, distance_cosinus, distance_jaccard, distance_hamming, distance_bray_curtis, distance_kullback_leibler
 
+# Tab
+st.set_page_config(
+        page_title="Document Matching",
+        page_icon="chart_with_upwards_trend",
+        layout="wide",
+    )
 
 # Title of the application
 st.title("Document Similarity Analysis")
 
-# Sidebar for Configuration
-st.sidebar.subheader("Configuration Parameters")
-st.sidebar.write("""
-    **Instructions:** Select the options above to configure the document similarity analysis.
-""")
-
-##### COLORS + Corpus type + Jaccard
-
-# Choose descriptor type and normalization method
-descriptor = st.sidebar.selectbox("Select descriptor to use:", ["BoW", "TF-IDF"])
-descriptor_type = st.sidebar.selectbox("Descriptor type:", ["Binary", "Occurrence"])
-normalization_type = st.sidebar.selectbox("Select normalization method:", ["None", "Probability", "L2"])
-corpus_type = st.sidebar.selectbox("Select corpus:", ["Chirac", "Obama", "Cats & dogs", "Custom", "File"])
-
-# Choose distance metric
+# Selection
+descriptor = st.sidebar.selectbox("Select descriptor to use:", 
+                                  ["BoW", "TF-IDF"])
+descriptor_type = st.sidebar.selectbox("Select descriptor type:", 
+                                       ["Binary", "Occurrence"])
+normalization_type = st.sidebar.selectbox("Select normalization method:", 
+                                          ["None", "Probability", "L2"])
+corpus_type = st.sidebar.selectbox("Select corpus:", 
+                                   ["Chirac", "Obama", "CatsDogs", "Custom", "File"])
 distance_type = st.sidebar.selectbox("Select distance metric:",
                                       ["Euclidean", "Manhattan", "Cosine", "Jaccard", "Hamming", "Bray-Curtis", "Kullback-Leibler"])
 
-input_mode = st.sidebar.radio("How would you like to enter the text?", ("Write text", "Upload a txt file"))
+if corpus_type == "Chirac" or corpus_type == "Obama" or corpus_type == "CatsDogs":
+    with open(corpus_type + ".txt", 'r', encoding='utf-8') as file:
+        input_text = file.read()
 
-# Text area for manual input or file upload
-if input_mode == "Write text":
+elif corpus_type == "Custom":
     input_text = st.text_area("Enter your text:")
 else:
     uploaded_file = st.file_uploader("Upload your file:", type="txt")
@@ -68,40 +69,39 @@ Vive la France !"""
 if input_text:
     with st.spinner("Processing..."):
         sentences = split_into_sentences(input_text)
-        st.write(f"The text contains {len(sentences)} sentences.")
-        
         sents_tokens, unique_tokens = preprocess_sentences(sentences)
 
+        st.write(f"The text contains {len(sentences)} sentences and {len(unique_tokens)} tokens.")
+        
         if descriptor == "BoW":
-            st.title("Bag of Words")
+            st.header("Bag of Words")
             matrix = create_freq_matrix(sents_tokens, unique_tokens, descriptor_type, normalization_type)
 
         else:
-            st.title("TF-IDF")
+            st.header("TF-IDF")
             matrix = create_freq_matrix(sents_tokens, unique_tokens, descriptor_type, normalization_type)
-            print(matrix)
 
             # Calculate TF-IDF
             matrix = calculate_tfidf(matrix, len(sentences))
 
             # Display TF-IDF Matrix
-            st.write("**TF-IDF Matrix:**")
+            st.subheader("TF-IDF matrix")
             st.dataframe(pd.DataFrame(matrix, columns=unique_tokens, index=[f'Doc {i+1}' for i in range(len(sentences))]))
 
-        # Document Frequency (DF) for each word
-        df = (pd.DataFrame(matrix, columns=unique_tokens) > 0).sum(axis=0)
-        
-        selected_sentence = st.selectbox(
-            "Select a sentence to calculate the TF-IDF_New vector:",
-            options=sentences,
-            format_func=lambda x: x[:100] + "..." if len(x) > 100 else x  # Show a part of the sentence if long
-        )
+            # Document Frequency (DF) for each word
+            df = (pd.DataFrame(matrix, columns=unique_tokens) > 0).sum(axis=0)
+            
+            selected_sentence = st.selectbox(
+                "Select a sentence to calculate the TF-IDF New vector:",
+                options=sentences,
+                format_func=lambda x: x[:100] + "..." if len(x) > 100 else x  # Show a part of the sentence if long
+            )
 
-        # Calculate TF-IDF_New for the selected sentence
-        if selected_sentence:
-            tfidf_new_vector = tfidf_new(unique_tokens, selected_sentence.split(), df)
-            st.write("TF-IDF_New Vector:")
-            st.dataframe(tfidf_new_vector)
+            # Calculate TF-IDF_New for the selected sentence
+            if selected_sentence:
+                tfidf_new_vector = tfidf_new(unique_tokens, selected_sentence.split(), df)
+                st.subheader("TF-IDF New")
+                st.dataframe(tfidf_new_vector)
 
         similarity_matrix = []
         # Distance Calculation Based on User Choice
@@ -123,17 +123,18 @@ if input_text:
         similarity_df = pd.DataFrame(similarity_matrix, 
                                      columns=[f'Doc {i+1}' for i in range(len(sentences))],
                                      index=[f'Doc {i+1}' for i in range(len(sentences))])
-        st.write("Similarity Matrix:")
+        st.subheader("Similarity matrix")
         st.dataframe(similarity_df)
 
+        st.subheader("Document similarity")
         # Select a document to find the closest ones
         doc_query = st.number_input("Enter the document number (1 to N):", 
                                     min_value=1, max_value=len(sentences), step=1) - 1
         k = st.slider("Select the number of similar documents to display:", 1, len(sentences)-1, 3)
 
         # Calculate the closest documents
-        if st.button("Find Similar Documents"):
+        if st.button("Find"):
             k_closest = k_nearest_documents(doc_query, k, similarity_matrix)
-            st.write(f"The {k} documents most similar to document {doc_query + 1}:")
-            for idx, sim in k_closest:
-                st.write(f"Document {idx + 1} with similarity of {sim:.3f}")
+            st.dataframe(pd.DataFrame(k_closest, 
+                                      columns=['Document number', 'Similarity score'],
+                                      index=None))
