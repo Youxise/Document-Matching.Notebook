@@ -1,8 +1,9 @@
-To run the application, open the terminal and run the command : streamlit run app.py
+To run the application, open the terminal and run the command : _streamlit run app.py_
 
-I. Fonctionnalités principales
+**I. Fonctionnalités principales**
 
 1. Sélection et navigation dans le corpus
+
 - L'utilisateur peut choisir un corpus de documents en fonction de la langue (« Corpus Français » ou « Corpus Anglais »).
 - Il peut soit choisir de faire une recherche par documents (dans un seul corpus) ou bien une recherche par phrases (dans un seul document) 
 - Navigation par dossiers et fichiers via une barre latérale.
@@ -15,13 +16,16 @@ I. Fonctionnalités principales
 3. Méthodes de descripteurs
 
 L'application propose différents descripteurs pour modéliser les documents :
-BoW (Bag of Words)
-TF-IDF
-Word2Vec
-FastText
-Doc2Vec
+
+- BoW (Bag of Words)
+- TF-IDF
+- Word2Vec
+- FastText
+- Doc2Vec
+  
 Chaque descripteur peut être configuré pour être binaire ou basé sur les occurrences, avec une normalisation (« L1 », « L2 » ou aucune).
-Remarque : seuls BoW et TF-IDF sont concernés par le type de comptage et la normalisation.
+
+**Remarque :** seuls BoW et TF-IDF sont concernés par le type de comptage et la normalisation.
 
 4. Visualisation des matrices
 
@@ -32,8 +36,8 @@ b. Visualisation des vectorisations des tokens à l'aide de réduction dimension
 
 5. Analyse des similarités
 
-Métriques de distance : choix parmi plusieurs mesures de distance, telles que « Cosine », « Euclidean », « Manhattan », « Jaccard », « Kullback-Leibler », etc.
-Recherche des k documents les plus similaires à un document ou une phrase donnée.
+- Métriques de distance : choix parmi plusieurs mesures de distance, telles que « Cosine », « Euclidean », « Manhattan », « Jaccard », « Kullback-Leibler », etc.
+- Recherche des k documents les plus similaires à un document ou une phrase donnée.
 
 6. Génération de Word Clouds
 
@@ -43,7 +47,7 @@ Les mots les plus fréquents ou pertinents (à partir de TF-IDF) sont affichés 
 
 Interaction avec un chatbot simple qui répond aux questions en identifiant les phrases ou documents les plus proches du contenu fourni.
 
-II. Fonctionnement et méthodes utilisées
+**II. Fonctionnement et méthodes utilisées**
 
 Prétraitement des textes
 
