@@ -1,0 +1,12 @@
+In 2021, I decided to join the Bachelor Universitaire de Technologiques en Informatique at the Institut Universitaire de Technologies de Reims.
+The aim of this course is to impart the knowledge needed to become a competent developer, and to this end it offers several pathways, the first being
+The first, the development path, trains students in the creation and production of web, mobile and office applications.
+focused on data processing and analysis. 
+
+Personally, I chose the development path, which enabled me to learn the main languages and methods needed to create applications, such as
+such as the combination of HTML, CSS, JavaScript, TypeScript, PHP and React for website development, C++ for desktop application development and ReactNative
+for mobile projects. We also saw some less important things, such as video game development with Godot, which wasn't quite up to scratch.
+
+The BUT projects were mainly group work to learn how to collaborate between developers, which enabled us to learn how to manage collaborative tools such as GitLab.
+tools such as GitLab, the agile work method. For example, we worked in groups of five on a project to produce a web application designed to 
+to provide a solution to facilitate the setting up of a schedule for the training's teachers.

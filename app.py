@@ -1,140 +1,318 @@
+import os
+import nltk
 import streamlit as st
 import pandas as pd
-from preprocessing import split_into_sentences, preprocess_sentences
-from matrix import k_nearest_documents, create_freq_matrix, create_similarity_matrix
-from tfidf import calculate_tfidf, tfidf_new
-from distances import distance_euclidean, distance_manhattan, distance_cosinus, distance_jaccard, distance_hamming, distance_bray_curtis, distance_kullback_leibler
+import numpy as np
+import matplotlib.pyplot as plt
+import re
+from sklearn.metrics.pairwise import pairwise_distances
+from sklearn.decomposition import PCA
+from wordcloud import WordCloud
+from PIL import Image 
 
-# Tab
+# Import custom modules for preprocessing, etc.
+from nltk.tokenize import sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
+from stemming.lovins import stem
+from nltk.stem import LancasterStemmer, PorterStemmer, SnowballStemmer, WordNetLemmatizer
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+
+# Import optimized functions
+from matrix import corpus_preprocessing, descriptor_application, k_nearest_documents, compute_kl_similarity_matrix
+from folder_manage import list_files, list_folders
+
+
+# Set up the Streamlit page layout and configuration
+st.session_state["base_path"] = os.getcwd()  # Start at the current working directory
+base_path = st.session_state.get("base_path", ".")
+
 st.set_page_config(
-        page_title="Document Matching",
-        page_icon="chart_with_upwards_trend",
-        layout="wide",
-    )
+    page_title="Document Matching",
+    page_icon="chart_with_upwards_trend",
+    layout="wide",
+)
 
-# Title of the application
+# Display the main title of the application
 st.title("Document Similarity Analysis")
 
-# Selection
-descriptor = st.sidebar.selectbox("Select descriptor to use:", 
-                                  ["BoW", "TF-IDF"])
-descriptor_type = st.sidebar.selectbox("Select descriptor type:", 
-                                       ["Binary", "Occurrence"])
-normalization_type = st.sidebar.selectbox("Select normalization method:", 
-                                          ["None", "Probability", "L2"])
-corpus_type = st.sidebar.selectbox("Select corpus:", 
-                                   ["Chirac", "Obama", "CatsDogs", "Custom", "File"])
-distance_type = st.sidebar.selectbox("Select distance metric:",
-                                      ["Euclidean", "Manhattan", "Cosine", "Jaccard", "Hamming", "Bray-Curtis", "Kullback-Leibler"])
+language = st.sidebar.radio("Select language:", ["French", "English"], index=None)
+search_type = st.sidebar.radio("Select searching type:", ["Per document", "Per sentence"], index=None)
 
-if corpus_type == "Chirac" or corpus_type == "Obama" or corpus_type == "CatsDogs":
-    with open(corpus_type + ".txt", 'r', encoding='utf-8') as file:
-        input_text = file.read()
-
-elif corpus_type == "Custom":
-    input_text = st.text_area("Enter your text:")
+if language == "French":
+    folder_path = "Corpus_Francais"
+    mask_map = np.array(Image.open('france-map.jpg'))
 else:
-    uploaded_file = st.file_uploader("Upload your file:", type="txt")
-    if uploaded_file is not None:
-        input_text = uploaded_file.read().decode("utf-8")
-    else:
-        input_text = """La confiance que vous venez de me témoigner, je veux y répondre en m'engageant dans l'action avec détermination.
-Mes chers compatriotes de métropole, d'outre-mer et de l'étranger,
-Nous venons de vivre un temps de grave inquiétude pour la Nation.
-Mais ce soir, dans un grand élan la France a réaffirmé son attachement aux valeurs de la République.
-Je salue la France, fidèle à elle-même, fidèle à ses grands idéaux, fidèle à sa vocation universelle et humaniste.
-Je salue la France qui, comme toujours dans les moments difficiles, sait se retrouver sur l'essentiel. Je salue les Françaises et les Français épris de solidarité et de liberté, soucieux de s'ouvrir à l'Europe et au monde, tournés vers l'avenir.
-J'ai entendu et compris votre appel pour que la République vive, pour que la Nation se rassemble, pour que la politique change. Tout dans l'action qui sera conduite, devra répondre à cet appel et s'inspirer d'une exigence de service et d'écoute pour chaque Française et chaque Français.
-Ce soir, je veux vous dire aussi mon émotion et le sentiment que j'ai de la responsabilité qui m'incombe.
-Votre choix d'aujourd'hui est un choix fondateur, un choix qui renouvelle notre pacte républicain. Ce choix m'oblige comme il oblige chaque responsable de notre pays. Chacun mesure bien, à l'aune de notre histoire, la force de ce moment exceptionnel.
-Votre décision, vous l'avez prise en conscience, en dépassant les clivages traditionnels, et, pour certains d'entre vous, en allant au-delà même de vos préférences personnelles ou politiques.
-La confiance que vous venez de me témoigner, je veux y répondre en m'engageant dans l'action avec détermination.
-Président de tous les Français, je veux y répondre dans un esprit de rassemblement. Je veux mettre la République au service de tous. Je veux que les valeurs de liberté, d'égalité et de fraternité reprennent toute leur place dans la vie de chacune et de chacun d'entre nous.
-La liberté, c'est la sécurité, la lutte contre la violence, le refus de l'impunité. Faire reculer l'insécurité est la première priorité de l'Etat pour les temps à venir.
-La liberté, c'est aussi la reconnaissance du travail et du mérite, la réduction des charges et des impôts.
-L'égalité, c'est le refus de toute discrimination, ce sont les mêmes droits et les mêmes devoirs pour tous.
-La fraternité, c'est sauvegarder les retraites. C'est aider les familles à jouer pleinement leur rôle. C'est faire en sorte que personne n'éprouve plus le sentiment d'être laissé pour compte.
-La France, forte de sa cohésion sociale et de son dynamisme économique, portera en Europe et dans le monde l'ambition de la paix, des libertés et de la solidarité.
-Dans les prochains jours, je mettrai en place un gouvernement de mission, un gouvernement qui aura pour seule tâche de répondre à vos préoccupations et d'apporter des solutions à des problèmes trop longtemps négligés. Son premier devoir sera de rétablir l'autorité de l'Etat pour répondre à l'exigence de sécurité, et de mettre la France sur un nouveau chemin de croissance et d'emploi.
-C'est par une action forte et déterminée, c'est par la solidarité de la Nation, c'est par l'efficacité des résultats obtenus, que nous pourrons lutter contre l'intolérance, faire reculer l'extrémisme, garantir la vitalité de notre démocratie. Cette exigence s'impose à chacun d'entre nous. Elle impliquera, au cours des prochaines années, vigilance et mobilisation de la part de tous.
-Mes chers compatriotes,
-Le mandat que vous m'avez confié, je l'exercerai dans un esprit d'ouverture et de concorde, avec pour exigence l'unité de la République, la cohésion de la Nation et le respect de l'autorité de l'Etat.
-Les jours que nous venons de vivre ont ranimé la vigueur nationale, la vigueur de l'idéal démocratique français. Ils ont exprimé une autre idée de la politique, une autre idée de la citoyenneté.
-Chacune et chacun d'entre vous, conscient de ses responsabilités, par un choix de liberté, a contribué, ce soir, à forger le destin de la France.
-Il y a là un espoir qui ne demande qu'à grandir, un espoir que je veux servir.
-Vive la République !
-Vive la France !"""
+    folder_path = "Corpus_Anglais"
+    mask_map = np.array(Image.open('usa-map.jpg'))
 
-# Process if text is provided
+
+corpus = list_folders(folder_path)
+
+# Folder navigation
+if corpus:
+    base_path = os.path.join(base_path, folder_path)
+    selected_folder = st.sidebar.selectbox("Select corpus:", corpus)
+    base_path = os.path.join(base_path, selected_folder) # update the path
+
+# Save the updated path in session state
+st.session_state["base_path"] = base_path
+
+documents = list_files(st.session_state["base_path"])
+
+# File navigation
+if documents:
+    document = st.sidebar.selectbox(
+        "Select document:",
+        options=documents,
+    )
+    document = os.path.join(st.session_state["base_path"], document) # update the path
+# If folder is empty
+else:
+    st.sidebar.write("No files found in the specified folder.")
+
+# Descriptor
+descriptor = st.sidebar.selectbox("Select descriptor to use:", ["BoW", "TF-IDF", "Word2Vec", "FastText", "Doc2Vec"])
+descriptor_type = st.sidebar.selectbox("Select descriptor type:", ["Binary", "Occurrence"])
+normalization_type = st.sidebar.selectbox("Select normalization method:", ["L1", "L2", "None"])
+distance_type = st.sidebar.selectbox("Select distance metric:", ["Euclidean", "Manhattan", "Cosine", "Jaccard", "Hamming", "Bray-Curtis", "Kullback-Leibler"])
+
+# Preprocessing options
+stopwords_option = st.sidebar.selectbox("Select stopwords to remove:", ["French", "English", "None"])
+
+reducing_type = st.sidebar.radio("Select reducing type:", ["Stemming", "Lemmatization", "None"], index=None)
+stemming_option = st.sidebar.selectbox("Select stemming:", ["Lovins", "Lancaster", "Porter", "Snowball"])
+
+input_text = None
+
+# Load the corpus documents
+if search_type == "Per document":
+    sentences = []
+    print(st.session_state["base_path"])
+    for filename in os.listdir(st.session_state["base_path"]):
+        file_path = os.path.join(st.session_state["base_path"], filename)
+        if os.path.isfile(file_path):
+            with open(file_path, 'r', encoding='utf-8') as file:
+                sentences.append(file.read().lower())
+else:
+# Load the document and tokenize sentences
+    with open(document, 'r', encoding='utf-8') as file:
+        input_text = file.read().lower()
+    
+        # Split the input text into sentences
+        sentences = sent_tokenize(input_text)
+
+# Remove stopwords
+stopwords_list = []
+if stopwords_option == "French":
+    stopwords_list = stopwords.words('french')
+elif stopwords_option == "English":
+    stopwords_list = stopwords.words('english')
+
+# Reducing words
+def same(text):
+    return text
+
+reducer = same
+if reducing_type == "Stemming":
+    stemming_functs = {
+        "Lovins": stem,
+        "Porter": PorterStemmer().stem,
+        "Lancaster": LancasterStemmer().stem,
+        "Snowball": SnowballStemmer("english").stem if language == "English" else SnowballStemmer("french").stem 
+    }
+    reducer = stemming_functs[stemming_option]
+else:
+    reducer = WordNetLemmatizer().lemmatize
+
+sentences_pp, tokenized_sentences_pp, unique_tokens = corpus_preprocessing(sentences, reducer, stopwords_list)
+
+model, matrix = descriptor_application(sentences_pp, tokenized_sentences_pp, unique_tokens, descriptor, descriptor_type, normalization_type)
+
 if input_text:
-    with st.spinner("Processing..."):
-        sentences = split_into_sentences(input_text)
-        sents_tokens, unique_tokens = preprocess_sentences(sentences)
+        st.text_area("Corpus content:", input_text, height=300, disabled=True)
 
-        st.write(f"The text contains {len(sentences)} sentences and {len(unique_tokens)} tokens.")
+st.write(f"The text contains {len(sentences_pp)} documents and {len(unique_tokens)} unique tokens.")
+
+# Display descriptor matrix
+st.subheader(f"{descriptor} Matrix")
+st.dataframe(pd.DataFrame(matrix, index=[f'Doc {i+1}' for i in range(len(sentences_pp))]))
+
+visualize_tok_content = st.number_input("Enter token number:", min_value=1, max_value=len(unique_tokens), step=1) - 1
+st.text_area("Token content:", unique_tokens[visualize_tok_content], height=68, disabled=True)
+
+# Display content
+visualize_doc_content = st.number_input("Enter document number: ", min_value=1, max_value=len(sentences), step=1) - 1
+st.text_area("Document content before preprocessing:", sentences[visualize_doc_content], height=100, disabled=True)
+
+# Display content
+visualize_doc_content = st.number_input("Enter document number:  ", min_value=1, max_value=len(sentences_pp), step=1) - 1
+st.text_area("Document content after preprocessing:", sentences_pp[visualize_doc_content], height=100, disabled=True)
+
+
+# Display similarity matrix
+st.subheader("Similarity Matrix")
+if distance_type.lower() == "kullback-leibler":
+    similarity_matrix = compute_kl_similarity_matrix(matrix)
+else:
+    similarity_matrix = pairwise_distances(matrix, metric= re.sub(r'[^\w\s]', '', distance_type.lower()))
+st.dataframe(pd.DataFrame(similarity_matrix, index=[f'Doc {i+1}' for i in range(len(sentences_pp))], columns=[f'Doc {i+1}' for i in range(len(sentences))]))
+
+if descriptor in ["Word2Vec", "FastText", "Doc2Vec"]:
         
-        if descriptor == "BoW":
-            st.header("Bag of Words")
-            matrix = create_freq_matrix(sents_tokens, unique_tokens, descriptor_type, normalization_type)
+        # Récupérez les embeddings pour le vocabulaire
+        word_vectors = model.wv  # Récupérer les vecteurs pour Word2Vec ou FastText
+        embeddings = []
+        words = []
 
-        else:
-            st.header("TF-IDF")
-            matrix = create_freq_matrix(sents_tokens, unique_tokens, descriptor_type, normalization_type)
+        for word in unique_tokens:
+            if word in word_vectors:
+                embeddings.append(word_vectors[word])
+                words.append(word)
 
-            # Calculate TF-IDF
-            matrix = calculate_tfidf(matrix, len(sentences))
+        # Réduction dimensionnelle à 2D avec PCA
+        pca = PCA(n_components=2)
+        reduced_embeddings = pca.fit_transform(embeddings)
 
-            # Display TF-IDF Matrix
-            st.subheader("TF-IDF matrix")
-            st.dataframe(pd.DataFrame(matrix, columns=unique_tokens, index=[f'Doc {i+1}' for i in range(len(sentences))]))
+        # Afficher le scatter plot
+        fig, ax = plt.subplots(figsize=(10, 8))
+        ax.scatter(reduced_embeddings[:, 0], reduced_embeddings[:, 1])
 
-            # Document Frequency (DF) for each word
-            df = (pd.DataFrame(matrix, columns=unique_tokens) > 0).sum(axis=0)
-            
-            selected_sentence = st.selectbox(
-                "Select a sentence to calculate the TF-IDF New vector:",
-                options=sentences,
-                format_func=lambda x: x[:100] + "..." if len(x) > 100 else x  # Show a part of the sentence if long
-            )
+        # Annoter les points avec les mots
+        for i, word in enumerate(words):
+            ax.annotate(word, (reduced_embeddings[i, 0], reduced_embeddings[i, 1]), fontsize=8)
 
-            # Calculate TF-IDF_New for the selected sentence
-            if selected_sentence:
-                tfidf_new_vector = tfidf_new(unique_tokens, selected_sentence.split(), df)
-                st.subheader("TF-IDF New")
-                st.dataframe(tfidf_new_vector)
+        st.pyplot(fig)
 
-        similarity_matrix = []
-        # Distance Calculation Based on User Choice
-        if distance_type == "Euclidean":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_euclidean)
-        elif distance_type == "Manhattan":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_manhattan)
-        elif distance_type == "Cosine":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_cosinus)
-        elif distance_type == "Jaccard":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_jaccard)
-        elif distance_type == "Hamming":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_hamming)
-        elif distance_type == "Bray-Curtis":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_bray_curtis)
-        elif distance_type == "Kullback-Leibler":
-            similarity_matrix = create_similarity_matrix(sentences, matrix, distance_kullback_leibler)
+# K-nearest documents
+st.subheader("Find Most Similar Documents")
+doc_index = st.number_input("Enter document number:", min_value=1, max_value=len(sentences_pp), step=1) - 1
+doc_query = st.text_area("Document content:", sentences_pp[doc_index], height=300, disabled=False)
+k = st.slider("Select number of similar documents:", 1, len(sentences_pp) - 1, 3)
+if st.button("Find"):
+    sentences_tab1, tokenized_sentences_tab1, unique_tokens_tab1 = corpus_preprocessing([doc_query], reducer, stopwords_list)
+    k_closest, vector_query = k_nearest_documents(sentences_tab1, tokenized_sentences_tab1, unique_tokens_tab1, descriptor, descriptor_type, normalization_type, k, matrix, "cosine")
+    k_closest_dataframe = pd.DataFrame(k_closest, columns=["Document Number", "Similarity Score"])
+    k_closest_dataframe["Document content"] = k_closest_dataframe["Document Number"].apply(lambda x: sentences_pp[x-1])
+    st.write(k_closest_dataframe)
+
+# ------------------------------------------------------- Chatbot -------------------------------------------------- #
+
+
+st.title("Chatbot")
+
+query = st.text_area("Type a query:", height=100, disabled=False)
+response_functs = {
+        "hello,": "Hi there! ",
+        "hi,": "Hello there! ",
+        "bonjour,": "Bonjour! ",
+        "bonsoir,": "Bonsoir! ",
+        "salut,": "Salutations! ",
+        "pourquoi": "Car ",
+        "why": "Because ",
+        "comment": "Après analyse, ",
+        "how": "After analysis, ",
+        "peux-tu": "Oui bien sûr. ",
+        "can": "Sure! "
+    }
+def replace_words(text, responses):
+
+    words = text.split()
+    replaced_text = []
+
+    for word in words:
+        if word.lower() in responses:
+            replaced_text.append(responses[word.lower()])
+
+    return " ".join(replaced_text)
+
+if st.button("Ask"):
+    
+    chatbot_response = replace_words(query, response_functs)
+    
+    sentences_tab2_pp, tokenized_sentences_tab2, unique_tokens_tab2 = corpus_preprocessing([query], reducer, stopwords_list)
+
+    if descriptor != "FastText":
+    # Filtering query words not in vocabulary
+        for i in range(len(tokenized_sentences_tab2)):
+            reduced_words = [word for word in tokenized_sentences_tab2[i] if word in unique_tokens]
+            sentences_tab2_pp[i] = ' '.join(reduced_words)
         
-        similarity_df = pd.DataFrame(similarity_matrix, 
-                                     columns=[f'Doc {i+1}' for i in range(len(sentences))],
-                                     index=[f'Doc {i+1}' for i in range(len(sentences))])
-        st.subheader("Similarity matrix")
-        st.dataframe(similarity_df)
+        tokenized_sentences_tab2 = [word_tokenize(sentence) for sentence in sentences_tab2_pp]
+        unique_tokens_tab2 = sorted(set(word for tokens in tokenized_sentences_tab2 for word in tokens))
+    
+    # Searching for the most similar document
+    k_closest = k_nearest_documents(sentences_tab2_pp, tokenized_sentences_tab2, unique_tokens_tab2, descriptor, descriptor_type, normalization_type, 1, matrix, "cosine")
 
-        st.subheader("Document similarity")
-        # Select a document to find the closest ones
-        doc_query = st.number_input("Enter the document number (1 to N):", 
-                                    min_value=1, max_value=len(sentences), step=1) - 1
-        k = st.slider("Select the number of similar documents to display:", 1, len(sentences)-1, 3)
+    # Searching for the best response based on the most significant query words
+    top_doc_idx = k_closest[0][0][0] - 1
+    top_doc = sentences[top_doc_idx]
+    if search_type == "Per sentence":
+        st.write(chatbot_response + top_doc)
+    else:
+        # Searching for the similar sentence
+        similar_doc_sents = sent_tokenize(top_doc)
+        similar_doc_sents_pp, similar_doc_sents_tokenized, similar_doc_unique_tokens = corpus_preprocessing(similar_doc_sents, reducer, stopwords_list)
+        model_tab2, matrix_tab2 = descriptor_application(similar_doc_sents_pp, similar_doc_sents_tokenized, similar_doc_unique_tokens, descriptor, descriptor_type, normalization_type)
 
-        # Calculate the closest documents
-        if st.button("Find"):
-            k_closest = k_nearest_documents(doc_query, k, similarity_matrix)
-            st.dataframe(pd.DataFrame(k_closest, 
-                                      columns=['Document number', 'Similarity score'],
-                                      index=None))
+        similar_sent = k_nearest_documents(sentences_tab2_pp, tokenized_sentences_tab2, unique_tokens_tab2, descriptor, descriptor_type, normalization_type, 1, matrix_tab2, "cosine")
+        top_sent_idx = similar_sent[0][0][0] - 1
+        top_sent = similar_doc_sents[top_sent_idx]
+        st.write(chatbot_response + top_sent)
+
+# ------------------------------------------------------- Word Cloud -------------------------------------------------- #
+
+st.title("Word Cloud")  
+# Display content
+max_words = st.number_input("Max words:  ", min_value=1, max_value=len(unique_tokens), step=1)
+
+background_color = st.selectbox("Select background color:", ["Black", "White"])
+
+color = st.selectbox("Select color map:", ['viridis', 'inferno', 'plasma', 'magma', 'Blues', 'BuGn', 'BuPu',
+                             'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd', 'afmhot', 'autumn', 'bone', 'cool',
+                             'copper', 'gist_heat', 'gray', 'hot',
+                             'pink', 'spring', 'summer', 'winter', 'BrBG', 'bwr', 'coolwarm', 'PiYG', 'PRGn', 'PuOr',
+                             'RdBu', 'RdGy', 'RdYlBu', 'RdYlGn', 'Spectral',
+                             'seismic', 'Accent', 'Dark2', 'Paired', 'Pastel1',
+                             'Pastel2', 'Set1', 'Set2', 'Set3', 'Vega10',
+                             'Vega20', 'Vega20b', 'Vega20c', 'gist_earth', 'terrain', 'ocean', 'gist_stern',
+                             'brg', 'CMRmap', 'cubehelix',
+                             'gnuplot', 'gnuplot2', 'gist_ncar',
+                             'nipy_spectral', 'jet', 'rainbow',
+                             'gist_rainbow', 'hsv', 'flag', 'prism'
+                             'PuBu', 'PuBuGn', 'PuRd', 'Purples', 'RdPu',
+                             'Reds', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd'])
+
+cloud_method = st.selectbox("Select method: ", ["TF-IDF score sum", "TF-IDF score mean", "TF-IDF score max", "None"])
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+if st.button("Generate"):
+    if search_type == "Per document":
+        full_text = "".join([item for sublist in sentences for item in sublist])
+    else:
+        full_text = input_text
+    fig = plt.figure()
+
+    word_cloud =  WordCloud(stopwords=stopwords_list, background_color=background_color.lower(),mask=mask_map, colormap=color, contour_width=2, width=800, height=400, max_words=max_words, contour_color='firebrick')
+    
+    if cloud_method == "None":
+        word_cloud.generate(full_text)
+    else:
+        vectorizer_cloud = TfidfVectorizer(stop_words=stopwords_list)
+        matrix_cloud = vectorizer_cloud.fit_transform(sent_tokenize(full_text))
+        tokens_cloud = vectorizer_cloud.get_feature_names_out()
+        score_cloud = matrix_cloud.toarray()
+
+        cloud_method_functs = {
+    "TF-IDF score sum": word_cloud.generate_from_frequencies(dict(zip(tokens_cloud, score_cloud.sum(axis=0)))),
+    "TF-IDF score mean": word_cloud.generate_from_frequencies(dict(zip(tokens_cloud, score_cloud.mean(axis=0)))),
+    "TF-IDF score max": word_cloud.generate_from_frequencies(dict(zip(tokens_cloud, score_cloud.max(axis=0))))
+}
+        
+        cloud_method_functs[cloud_method]
+    plt.axis("off")
+    plt.imshow(word_cloud, interpolation="bilinear")
+    st.pyplot(fig)

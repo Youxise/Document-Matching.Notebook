@@ -1,0 +1,7 @@
+My training is divided into three different parts: the DUT, the engineering school and the BUT.
+
+The DUT was very comprehensive in terms of training content. All the courses were of great value to me. The mathematics courses were as advanced as what you see now in Masters. And the computer science level of the DUT courses was on several different fields (robotics, artificial intelligence, web development, etc.). Only the management courses could have been more practically oriented.
+
+Conversely, the engineering school was a disaster, with no courses of any interest to me. The level of computer science was very low, and some courses had no place in my curriculum. For example, the physics courses on waves, etc., were of no interest to me. The preparatory students hadn't done computer science and everything was starting from scratch, so I just felt like I was wasting my time.
+
+Once again, I found an interest in my BUT training, which was in the same IUT as my DUT. And the courses were very interesting for me. There were no BUT courses that I found useless for my curriculum, and some courses confirmed my desire to do this master's degree, including the artificial intelligence course. What's more, it's a course that has enabled me to learn about tools like Docker, AWS and others. For me, these courses were essential if I was to be able to work afterwards, and they give me real skills that you don't get in engineering school or in a DUT.

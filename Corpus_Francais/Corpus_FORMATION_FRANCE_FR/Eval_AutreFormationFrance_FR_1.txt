@@ -1,0 +1,7 @@
+Ma formation est divisée en trois parties différentes : le DUT, l'école d'ingénieur et le BUT.
+
+Le DUT, sur le contenu de la formation, était très complet. Tous les cours ont eu une valeur importante à mes yeux. Les cours de mathématiques étaient aussi avancés que ce que l'on voit actuellement en master. Et le niveau en informatique des cours de DUT était sur plusieurs domaines différents (la robotique, l'intelligence artificielle, le développement web, etc.). Seuls les cours de gestion et management auraient pu être amenés d'une manière plus pratique.
+
+À l'inverse, l'école d'ingénieur était une catastrophe, aucun cours n'avait d'intérêt pour moi. Le niveau en informatique était très faible et certains cours n'avaient, pour moi, pas leur place dans mon cursus. Par exemple, les cours de physique, sur les ondes, etc., n'avaient pour moi pas d'intérêt. Les étudiants de prépa n'avaient pas fait d'informatique et tout recommençait de zéro, j'avais juste l'impression de perdre mon temps.
+
+J'ai trouvé à nouveau un intérêt dans ma formation en BUT qui était dans le même IUT que mon DUT. Et les cours ont été très intéressants pour moi. Il n'y a aucun cours du BUT que j'ai trouvé inutile pour mon cursus, et certains cours ont confirmé mon envie de faire ce master, dont le cours d'intelligence artificielle. De plus, c'est une formation qui m'a permis de me former sur des outils comme Docker, AWS et autres. Pour moi, ces cours étaient primordiaux pour pouvoir travailler après et donnent de vraies compétences qui ne sont ni en école d'ingénieur ni en DUT. 

@@ -1,0 +1,16 @@
+En 2021, j'ai décidé de rejoindre le Bachelor Universitaire de Technologiques en Informatique à l'Institut Universitaire de Technologies de Reims.
+Cette formation a pour but de transmettre les connaissances afin de devenir un développeur compétent, pour ça il propose plusieurs parcours, le premier
+le parcours développement permet de former à la création et réalisation d'une application web, mobile ou bien bureautique, le deuxième est le parcours
+data focalisé plus sur le traitement et l'analyse de donnée. 
+
+Personnelement, j'ai choisit le parcours dévéloppement ainsi, j'ai pu apprendre les principaux langages et méthodes nécessaires à la réalisation d'application tel
+que l'association HTML, CSS, JavaScript, TypeScript, PHP, React pour déveloper un site web, du C++ pour du développement d'application bureautique et du ReactNative
+pour des projets mobile. On a aussi vu des choses moins importantes tel que le développement de jeu-vidéo avec du Godot ce qui n'était pas totalement au point.
+
+Les projets au sein du BUT étaient principalement des travaux de groupes afin d'apprendre à collaborer entre développeur, ce qui a permis d'apprendre a gérer des outils
+collaboratif tel que GitLab, la méthode de travail agile. On a, par exemple, réaliser un projet en groupe de cinq consistant à produire une application web ayant pour 
+but de fournir une solution pour faciliter la mise en place d'un planning pour les enseignants de la formation.
+
+Cette formation m'a permis aussi de pouvoir effectuer une mise en avant du monde professionnel avec la réalisation de deux stages, le premier d'une durée de 8 semaines
+durant la deuxième année qui m'a permis de faire un premier entrée en entreprise. Le second stage d'une durée de 14 semaines durant la troisième année m'a donnée la
+chance d'apprendre de nouvelle compétence au sein d'une entreprise. 
